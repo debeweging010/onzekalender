@@ -2,18 +2,97 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <title>My Events Calendar</title>
   <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 20px; }
+    #calendar { max-width: 800px; margin: 40px auto; }
+    #eventInputs { max-width: 600px; margin: 0 auto 20px auto; }
+    #eventInputs input, #eventInputs textarea, #eventInputs button {
+      width: 100%; margin: 5px 0; padding: 6px;
+    }
+  </style>
 </head>
 <body>
-  <h1>My Events Calendar</h1>
-  <div id='calendar'></div>
 
-  <script>
-    const events = []; // will be replaced with events.json later
-    const calendarEl = document.getElementById('calendar');
-    const calendar = new FullCalendar.Calendar(calendarEl, { initialView:'dayGridMonth', events });
-    calendar.render();
-  </script>
+<h1 style="text-align:center;">My Events Calendar</h1>
+
+<div id="eventInputs">
+  <h2>Add Event</h2>
+  <input type="text" id="title" placeholder="Title (required)">
+  <input type="date" id="date" placeholder="Date (required)">
+  <input type="time" id="time" placeholder="Time (optional)">
+  <input type="text" id="place" placeholder="Place (required)">
+  <textarea id="description" placeholder="Description (optional)"></textarea>
+  <input type="text" id="fee" placeholder="Entrance Fee (optional)">
+  <input type="url" id="link" placeholder="External Link (optional)">
+  <button id="submitBtn">Submit Event</button>
+  <div id="formMessage" style="margin-top:5px;color:green;"></div>
+</div>
+
+<div id="calendar"></div>
+
+<script>
+const calendarEl = document.getElementById('calendar');
+let events = [];
+
+// Load events from events.json
+async function loadEvents() {
+  try {
+    const res = await fetch('events.json');
+    events = await res.json();
+    calendar.removeAllEvents();
+    events.forEach(e => calendar.addEvent(e));
+  } catch (err) {
+    console.error('Cannot load events.json', err);
+  }
+}
+
+// Initialize FullCalendar
+const calendar = new FullCalendar.Calendar(calendarEl, {
+  initialView: 'dayGridMonth',
+  events: events,
+  eventClick: function(info) {
+    if(info.event.url) {
+      window.open(info.event.url, "_blank");
+      info.jsEvent.preventDefault();
+    }
+  }
+});
+calendar.render();
+loadEvents();
+
+// Handle event submission safely
+document.getElementById('submitBtn').addEventListener('click', function() {
+  const title = document.getElementById('title').value.trim();
+  const date = document.getElementById('date').value;
+  if(!title || !date) {
+    document.getElementById('formMessage').textContent = "Title and date are required!";
+    return;
+  }
+
+  const newEvent = {
+    title,
+    start: date + (document.getElementById('time').value ? 'T' + document.getElementById('time').value : ''),
+    place: document.getElementById('place').value,
+    description: document.getElementById('description').value,
+    fee: document.getElementById('fee').value,
+    url: document.getElementById('link').value
+  };
+
+  // Add to calendar immediately
+  calendar.addEvent(newEvent);
+
+  // Show confirmation
+  document.getElementById('formMessage').textContent = "Event added locally!";
+
+  // Clear inputs
+  ['title','date','time','place','description','fee','link'].forEach(id => document.getElementById(id).value = '');
+
+  // Optional: you can add serverless backend here to persist events
+});
+</script>
+
 </body>
 </html>
